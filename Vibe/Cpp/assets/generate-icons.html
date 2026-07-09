@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8"><title>Icon Generator</title></head>
+<body>
+  <canvas id="c" width="512" height="512"></canvas>
+  <script>
+    const canvas = document.getElementById('c');
+    const ctx = canvas.getContext('2d');
+
+    function drawIcon(size) {
+      canvas.width = size;
+      canvas.height = size;
+      // Background
+      ctx.fillStyle = '#0D0E15';
+      ctx.fillRect(0, 0, size, size);
+
+      // Border
+      ctx.strokeStyle = '#B900FF';
+      ctx.lineWidth = size * 0.04;
+      ctx.shadowColor = '#B900FF';
+      ctx.shadowBlur = size * 0.06;
+      ctx.strokeRect(size * 0.1, size * 0.1, size * 0.8, size * 0.8);
+      ctx.shadowBlur = 0;
+
+      // Text
+      ctx.fillStyle = '#B900FF';
+      ctx.font = `bold ${size * 0.22}px "Courier New", monospace`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('CS', size / 2, size * 0.42);
+
+      // Secondary line
+      ctx.fillStyle = '#00F0FF';
+      ctx.font = `${size * 0.09}px "Courier New", monospace`;
+      ctx.fillText('v1.0', size / 2, size * 0.65);
+    }
+
+    function download(size) {
+      drawIcon(size);
+      const link = document.createElement('a');
+      link.download = `icon-${size}.png`;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    }
+
+    download(192);
+    setTimeout(() => download(512), 200);
+  </script>
+</body>
+</html>

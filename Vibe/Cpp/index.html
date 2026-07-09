@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#121814">
+  <meta name="description" content="ShaoYi's Matrix - 数字化活页本日程管理">
+  <meta name="author" content="ShaoYi">
+  <title>ShaoYi's Matrix v1.1</title>
+
+  <!-- Pixel Font -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+
+  <!-- Libraries -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://unpkg.com/dexie@3.2.4/dist/dexie.js"></script>
+
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="manifest" href="manifest.json">
+</head>
+<body>
+
+  <!-- Matrix Rain Background -->
+  <canvas id="matrix-rain"></canvas>
+
+  <!-- CRT / Scanline Overlays -->
+  <div id="crt-overlay"></div>
+  <div id="scanlines"></div>
+
+  <!-- Cursor Glow Container -->
+  <div id="cursor-trails"></div>
+
+  <!-- App Container -->
+  <div id="app">
+
+    <!-- ====== Header ====== -->
+    <header id="header">
+      <!-- Pixel Cat Mascot -->
+      <div id="mascot" class="mascot" title="ShaoYi's Cat — 点击摸摸!" data-status="online">
+        <div class="mascot-halo"></div>
+        <svg viewBox="0 0 14 12" width="56" height="48" shape-rendering="crispEdges" id="mascot-svg">
+          <!-- Ears (dark points) -->
+          <rect x="2" y="0" width="2" height="2" fill="#5D4037"/>
+          <rect x="10" y="0" width="2" height="2" fill="#5D4037"/>
+          <!-- Ear inner -->
+          <rect x="3" y="1" width="1" height="1" fill="#FFAB91"/>
+          <rect x="10" y="1" width="1" height="1" fill="#FFAB91"/>
+          <!-- Head top -->
+          <rect x="1" y="2" width="12" height="1" fill="#5D4037"/>
+          <!-- Face mask (dark) -->
+          <rect x="2" y="3" width="10" height="1" fill="#5D4037"/>
+          <!-- Main face (cream body) -->
+          <rect x="1" y="4" width="12" height="3" fill="#FFE0B2"/>
+          <!-- Eyes (blue) -->
+          <rect x="3" y="5" width="2" height="2" fill="#42A5F5"/>
+          <rect x="9" y="5" width="2" height="2" fill="#42A5F5"/>
+          <!-- Eye shine -->
+          <rect x="4" y="5" width="1" height="1" fill="#E3F2FD"/>
+          <rect x="10" y="5" width="1" height="1" fill="#E3F2FD"/>
+          <!-- Nose (pink) -->
+          <rect x="6" y="7" width="2" height="1" fill="#FF007F"/>
+          <!-- Mouth line -->
+          <rect x="5" y="8" width="1" height="1" fill="#5D4037"/>
+          <rect x="8" y="8" width="1" height="1" fill="#5D4037"/>
+          <!-- Lower face -->
+          <rect x="3" y="8" width="8" height="1" fill="#FFE0B2"/>
+          <!-- Chin -->
+          <rect x="4" y="9" width="6" height="2" fill="#FFE0B2"/>
+          <!-- Whiskers -->
+          <rect x="0" y="6" width="2" height="1" fill="#795548"/>
+          <rect x="12" y="6" width="2" height="1" fill="#795548"/>
+          <!-- Body hint -->
+          <rect x="3" y="11" width="8" height="1" fill="#FFE0B2"/>
+        </svg>
+        <span id="mascot-label" class="mascot-label">SHAOYI'S CAT</span>
+      </div>
+
+      <div id="title-group">
+        <h1 id="app-title" class="glitch-text neon-rainbow" data-text="SHAOYI'S MATRIX">SHAOYI'S MATRIX</h1>
+        <div id="byline">✦ CRAFTED BY SHAOYI ✦</div>
+      </div>
+      <span id="version-tag">v1.1 <span class="shaoyi-badge">BY SHAOYI</span></span>
+    </header>
+
+    <!-- ====== Toolbar ====== -->
+    <nav id="toolbar">
+      <div class="toolbar-group">
+        <button id="btn-today" class="btn">◀ 今天 ▶</button>
+        <button id="btn-prev" class="btn btn-icon">◀</button>
+        <span id="date-display" class="date-label">----.--.--</span>
+        <button id="btn-next" class="btn btn-icon">▶</button>
+      </div>
+      <div class="toolbar-group">
+        <button id="btn-day-view" class="btn active" data-view="day">日视图</button>
+        <button id="btn-week-view" class="btn" data-view="week">周视图</button>
+      </div>
+      <div class="toolbar-group">
+        <button id="btn-add" class="btn btn-accent">+ 新事项</button>
+        <button id="btn-template" class="btn">📋 填充模板</button>
+        <button id="btn-vacation" class="btn">🏖️ 休假</button>
+        <button id="btn-export" class="btn">导出 PDF</button>
+        <button id="btn-summary" class="btn">📄 导出摘要</button>
+        <button id="btn-table" class="btn">📊 日程摘要表</button>
+      </div>
+    </nav>
+
+    <!-- ====== Day View: Digital Binder ====== -->
+    <div id="view-day" class="view active">
+      <div id="binder">
+        <!-- ShaoYi Watermark -->
+        <div id="shaoyi-watermark">SHAOYI</div>
+
+        <!-- Left Sidebar: Period Axis + Binder Rings -->
+        <aside id="binder-sidebar">
+          <div id="binder-rings">
+            <div class="binder-ring"></div>
+            <div class="binder-ring"></div>
+            <div class="binder-ring"></div>
+            <div class="binder-ring"></div>
+            <div class="binder-ring"></div>
+          </div>
+          <div id="period-nav">
+            <button class="period-btn active" data-period="MORNING">
+              <span class="period-icon">☀</span>
+              <span class="period-label-en">AM CYCLE</span>
+              <span class="period-label-zh">上午</span>
+            </button>
+            <button class="period-btn" data-period="NOON">
+              <span class="period-icon">☀</span>
+              <span class="period-label-en">NOON</span>
+              <span class="period-label-zh">中午</span>
+            </button>
+            <button class="period-btn" data-period="AFTERNOON">
+              <span class="period-icon">☀</span>
+              <span class="period-label-en">PM CYCLE</span>
+              <span class="period-label-zh">下午</span>
+            </button>
+            <button class="period-btn" data-period="NIGHT">
+              <span class="period-icon">☽</span>
+              <span class="period-label-en">NIGHT</span>
+              <span class="period-label-zh">晚上</span>
+            </button>
+          </div>
+        </aside>
+
+        <!-- Main Schedule Table -->
+        <main id="schedule-area">
+          <!-- Table Header -->
+          <div id="table-header">
+            <div class="th-time">时间 / Time</div>
+            <div class="th-mission">事项 / Mission</div>
+            <div class="th-status">状态</div>
+            <div class="th-actions">操作</div>
+          </div>
+          <!-- Table Body (rendered by JS) -->
+          <div id="table-body"></div>
+          <!-- ShaoYi Signature -->
+          <div id="shaoyi-signature">
+            <span class="sig-char">✦</span>
+            <span class="sig-char">M</span>
+            <span class="sig-char">A</span>
+            <span class="sig-char">D</span>
+            <span class="sig-char">E</span>
+            <span>&nbsp;</span>
+            <span class="sig-char">B</span>
+            <span class="sig-char">Y</span>
+            <span>&nbsp;</span>
+            <span class="sig-char">S</span>
+            <span class="sig-char">H</span>
+            <span class="sig-char">A</span>
+            <span class="sig-char">O</span>
+            <span class="sig-char">Y</span>
+            <span class="sig-char">I</span>
+            <span>&nbsp;</span>
+            <span class="sig-char">✦</span>
+          </div>
+        </main>
+
+      </div>
+    </div>
+
+    <!-- ====== Week View ====== -->
+    <div id="view-week" class="view">
+      <div id="week-binders"></div>
+    </div>
+
+    <!-- ====== Empty State ====== -->
+    <div id="empty-state" class="empty-state">
+      <pre class="ascii-art">
+╔══════════════════════════════════════╗
+║  ░▒▓ SHAOYI'S MATRIX ▓▒░              ║
+║  [ EMPTY ]                           ║
+║  点击 [+ 新事项] 或 Ctrl+N 添加日程  ║
+╚══════════════════════════════════════╝
+      </pre>
+    </div>
+
+  </div>
+
+  <!-- Toast -->
+  <div id="toast" class="toast hidden"></div>
+
+  <!-- Scripts -->
+  <script src="js/storage.js"></script>
+  <script src="js/audio.js"></script>
+  <script src="js/export.js"></script>
+  <script src="js/app.js"></script>
+
+</body>
+</html>
